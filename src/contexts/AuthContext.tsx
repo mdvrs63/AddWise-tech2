@@ -1,3 +1,4 @@
+EGL276
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,19 +6,19 @@ import { supabase } from '@/integrations/supabase/client';
 export interface User {
   id: string;
   name: string;
-  phone_number: string;
+  email_id: string;
   role: 'customer' | 'admin' | 'superadmin';
   employee_id?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (phone_number: string, otp: string, role: 'customer' | 'admin') => Promise<boolean>;
+  login: (email_id: string, otp: string, role: 'customer' | 'admin') => Promise<boolean>;
   logout: () => void;
   signup: (userData: any) => Promise<boolean>;
-  superAdminLogin: (phone_number: string, otp: string) => Promise<boolean>;
-  generateOtp: (phone_number: string, role: 'customer' | 'admin' | 'superadmin') => Promise<boolean>;
-  verifyOtp: (phone_number: string, otp: string) => Promise<boolean>;
+  superAdminLogin: (email_id: string, otp: string) => Promise<boolean>;
+  generateOtp: (email_id: string, role: 'customer' | 'admin' | 'superadmin') => Promise<boolean>;
+  verifyOtp: (email_id: string, otp: string) => Promise<boolean>;
   isLoading: boolean;
 }
 
@@ -49,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (phone_number: string, otp: string, role: 'customer' | 'admin'): Promise<boolean> => {
+  const login = async (email_id: string, otp: string, role: 'customer' | 'admin'): Promise<boolean> => {
     setIsLoading(true);
     
     try {
@@ -58,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: customerData, error } = await supabase
           .from('signup_users')
           .select('*')
-          .eq('phone_number', phone_number)
+          .eq('email_id', email_id)
           .single();
 
         if (error || !customerData) {
@@ -67,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Verify OTP using the verifyOtp function
-        const isOtpValid = await verifyOtp(phone_number, otp);
+        const isOtpValid = await verifyOtp(email_id, otp);
         if (!isOtpValid) {
           setIsLoading(false);
           return false;
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = {
           id: customerData.id.toString(),
           name: customerData.full_name,
-          phone_number: customerData.phone_number,
+          email_id: customerData.email_id,
           role: 'customer' as const,
         };
         
@@ -89,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: adminData, error } = await supabase
           .from('employee_data')
           .select('*')
-          .eq('phone_number', phone_number)
+          .eq('email_id', email_id)
           .single();
 
         if (error || !adminData) {
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Verify OTP using the verifyOtp function
-        const isOtpValid = await verifyOtp(phone_number, otp);
+        const isOtpValid = await verifyOtp(email_id, otp);
         if (!isOtpValid) {
           setIsLoading(false);
           return false;
@@ -120,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userData = {
           id: adminData.id.toString(),
           name: adminData.full_name,
-          phone_number: adminData.phone_number,
+          email_id: adminData.email_id,
           role: 'admin' as const,
           employee_id: adminData.employee_id,
         };
@@ -137,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const superAdminLogin = async (phone_number: string, otp: string): Promise<boolean> => {
+  const superAdminLogin = async (email_id: string, otp: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
@@ -145,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: superAdminData, error: superAdminError } = await supabase
         .from('super_admins')
         .select('*')
-        .eq('phone_number', phone_number)
+        .eq('email_id', email_id)
         .single();
 
       if (superAdminError || !superAdminData) {
@@ -154,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Verify OTP using the verifyOtp function
-      const isOtpValid = await verifyOtp(phone_number, otp);
+      const isOtpValid = await verifyOtp(email_id, otp);
       if (!isOtpValid) {
         setIsLoading(false);
         return false;
@@ -163,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userData = {
         id: superAdminData.id.toString(),
         name: superAdminData.full_name,
-        phone_number: superAdminData.phone_number,
+        email_id: superAdminData.email_id,
         role: 'superadmin' as const,
       };
       
@@ -185,8 +186,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if user already exists
       const { data: existingUser } = await supabase
         .from('signup_users')
-        .select('phone_number')
-        .eq('phone_number', userData.phone_number)
+        .select('email_id')
+        .eq('email_id', userData.email_id)
         .single();
 
       if (existingUser) {
@@ -200,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .insert({
           user_id: Math.floor(Math.random() * 1000000), // Generate random user_id
           full_name: userData.name,
-          phone_number: userData.phone_number,
+          email_id: userData.email_id,
           email: userData.email
         })
         .select()
@@ -214,7 +215,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const authData = {
         id: signupUser.id.toString(),
         name: signupUser.full_name,
-        phone_number: signupUser.phone_number,
+        email_id: signupUser.email_id,
         role: 'customer' as const,
       };
       
@@ -229,36 +230,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const generateOtp = async (phone_number: string, role: 'customer' | 'admin' | 'superadmin'): Promise<boolean> => {
+  const generateOtp = async (email_id: string, role: 'customer' | 'admin' | 'superadmin'): Promise<boolean> => {
     try {
-      // First, check if the phone number exists in the appropriate table
+      // First, check if the emailid exists in the appropriate table
       let userExists = false;
       
       if (role === 'customer') {
         const { data: customerData, error } = await supabase
           .from('signup_users')
-          .select('phone_number')
-          .eq('phone_number', phone_number)
+          .select('email_id')
+          .eq('email_id', email_id)
           .single();
         userExists = !error && !!customerData;
       } else if (role === 'admin') {
         const { data: adminData, error } = await supabase
           .from('employee_data')
-          .select('phone_number')
-          .eq('phone_number', phone_number)
+          .select('email_id')
+          .eq('email_id', email_id)
           .single();
         userExists = !error && !!adminData;
       } else if (role === 'superadmin') {
         const { data: superAdminData, error } = await supabase
           .from('super_admins')
-          .select('phone_number')
-          .eq('phone_number', phone_number)
+          .select('email_id')
+          .eq('email_id', email_id)
           .single();
         userExists = !error && !!superAdminData;
       }
       
       if (!userExists) {
-        console.error('Phone number not found in database');
+        console.error('email id not found in database');
         return false;
       }
       
@@ -276,7 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error: dbError } = await supabase
         .from('otp_verifications')
         .insert({
-          phone_number,
+          email_id,
           otp,
           expires_at: expiryTime.toISOString(),
           is_verified: false
@@ -295,7 +296,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            phoneNumber: phone_number,
+           emailid : email_id,
             message: `Your OTP for login is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`
           })
         });
@@ -308,7 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // This allows testing with database OTPs
         }
         
-        console.log(`OTP generated and stored for ${phone_number}. SMS result:`, smsResult.message || smsResult.error);
+        console.log(`OTP generated and stored for ${email_id}. SMS result:`, smsResult.message || smsResult.error);
       } catch (smsError) {
         console.error('SMS API Error:', smsError);
         // Continue even if SMS fails - OTP is still stored in DB
@@ -320,7 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyOtp = async (phone_number: string, otp: string): Promise<boolean> => {
+  const verifyOtp = async (email_id: string, otp: string): Promise<boolean> => {
     try {
       // Get current time in IST for consistent comparison
       const now = new Date();
@@ -331,7 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: otpRecord, error: fetchError } = await supabase
         .from('otp_verifications')
         .select('*')
-        .eq('phone_number', phone_number)
+        .eq('email_id', email_id)
         .eq('otp', otp)
         .eq('is_verified', false)
         .order('created_at', { ascending: false })
@@ -362,7 +363,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      console.log(`OTP verified successfully for ${phone_number}`);
+      console.log(`OTP verified successfully for ${email_id}`);
       return true;
     } catch (error) {
       console.error('Verify OTP error:', error);
